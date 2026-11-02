@@ -1,0 +1,20 @@
+# dependencies (installed inside the builder stage)
+**/node_modules
+companion/node_modules
+companion/dist
+
+# repo metadata
+.git
+.gitignore
+.github
+
+# local state / secrets
+*.env
+.env
+.snaptrade.env
+*.log
+
+# docs and test fixtures not needed at build time
+docs
+assets
+*.md
