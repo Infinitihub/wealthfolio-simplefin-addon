@@ -294,15 +294,16 @@ describe('RestSyncStore', () => {
   });
 
   it('a request record never written yet lets the first download go: the server answers 200 with body null (F1)', async () => {
-    // The real wire shape: upstream returns `Json(None)` for a missing secret,
-    // and `getAddonSecret` hands that over as the STRING "null".
+    // The real wire shape: upstream returns `Json(None)` for a missing secret.
+    // `getAddonSecret` maps that to null; it used to hand over the STRING
+    // "null", which every JSON reader then reported as a corrupt document.
     const fetchStub = vi.fn(async (_url: string, init?: { method?: string; body?: string }) => (init?.method === 'POST'
       ? { ok: true, status: 200, json: async () => ({ success: true }), text: async () => '' }
       : { ok: true, status: 200, text: async () => 'null' }));
     vi.stubGlobal('fetch', fetchStub);
     try {
       const store = new RestSyncStore(new WealthfolioClient('http://wf'));
-      expect(await store.getSimplefinRequests()).toBe('null');
+      expect(await store.getSimplefinRequests()).toBeNull();
       const now = new Date('2026-10-18T15:00:00Z');
       expect(await reserveSimplefinRequest(requestLogIo(store)!, 'scheduled', now)).toEqual({ kind: 'go', at: now });
       const posted = fetchStub.mock.calls.find(([, init]) => init?.method === 'POST')!;

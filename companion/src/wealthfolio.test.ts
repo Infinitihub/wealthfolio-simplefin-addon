@@ -148,6 +148,18 @@ describe('WealthfolioClient', () => {
     expect(mockFetch.mock.calls[0][0]).toBe('http://wf/api/v1/addons/simplefin-sync/secrets?key=simplefin_access_url');
   });
 
+  it('returns null when an absent secret is answered with the JSON literal null', async () => {
+    // Wealthfolio 3.10 answers a key that was never written with the 4-byte body
+    // `null` (application/json), not a 404. Stringifying that gave callers the
+    // STRING "null", which is truthy: the sync printed "Fetching SimpleFin
+    // transactions from null..." and the JSON readers reported a CORRUPT
+    // document for documents that simply did not exist.
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => 'null' });
+    const c = new WealthfolioClient('http://wf');
+    const v = await c.getAddonSecret('simplefin-sync', 'sync_overrides');
+    expect(v).toBeNull();
+  });
+
   it('returns null when getAddonSecret returns 404', async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 404 });
     const c = new WealthfolioClient('http://wf');

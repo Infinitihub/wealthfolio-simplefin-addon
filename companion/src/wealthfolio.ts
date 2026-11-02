@@ -303,6 +303,14 @@ export class WealthfolioClient {
     if (!raw) return null;
     try {
       const parsed = JSON.parse(raw);
+      // Wealthfolio 3.10 answers a key that was never written with the JSON
+      // literal `null` (4 bytes, application/json) rather than a 404. Falling
+      // through to `String(parsed)` below turned that into the truthy STRING
+      // "null", so an absent secret read as present-but-null: the sync logged
+      // "Fetching SimpleFin transactions from null..." and every reader that
+      // JSON.parses the value (sync_overrides, sync_bookkeeping_filed) reported
+      // a CORRUPT document instead of an absent one.
+      if (parsed === null) return null;
       if (typeof parsed === 'string') return parsed;
       if (parsed && typeof parsed === 'object' && 'value' in parsed) {
         return (parsed as { value: string }).value;
